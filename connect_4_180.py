@@ -19,8 +19,14 @@ room = 0
 black = (0, 0, 0)
 white = (255, 255, 255)
 gold = (212, 175, 55)
-menu_color = (22, 163, 11)
+menu_color = (22, 0, 11)
 do_input = 1
+know_flip = 1 
+random_flip = 0
+
+
+
+
 
 def create_board():
     board = np.zeros((6, 7))
@@ -323,8 +329,10 @@ def main_game_player(events):
         time.sleep(0.05)
         
         grid_flip()
-        next_flip = random.randint(1, 6)
-        #next_flip = long
+        if random_flip == 1:
+            next_flip = random.randint(1, 6)
+        else:
+            next_flip = long
         
     if do_input == 0:
         do_input = 1
@@ -342,7 +350,8 @@ def main_game_player(events):
 
     
     screen.blit(text_surface, text_rect)
-    screen.blit(until_next, text_rect_2)
+    if know_flip == 1:
+        screen.blit(until_next, text_rect_2)
 
     
     #switch between turns
@@ -441,8 +450,10 @@ def main_game_ai(events, depth):
         time.sleep(0.05)
         
         grid_flip()
-        next_flip = random.randint(1, 6)
-        #next_flip = long
+        if random_flip == 1:
+            next_flip = random.randint(1, 6)
+        else:
+            next_flip = long
         
     if do_input == 0:
         do_input = 1
@@ -460,7 +471,8 @@ def main_game_ai(events, depth):
 
     
     screen.blit(text_surface, text_rect)
-    screen.blit(until_next, text_rect_2)
+    if know_flip == 1:
+        screen.blit(until_next, text_rect_2)
 
     
     #switch between turns
@@ -563,9 +575,34 @@ def main_menu(events):
     screen.fill(menu_color)
     menu_button(win_x/2, win_y/3, 200, 100, "Player Vs Player", 1, black, white, events, white)
     menu_button(win_x/2, win_y/3 + 150, 200, 100, "Player Vs AI", 2, black, white, events, white)
-    menu_button(win_x/2, win_y/3 + 300, 200, 100, "Reset", 6, black, white, events, white)
+    menu_button(win_x/2, win_y/3 + 300, 200, 100, "Settings", 7, black, white, events, white)
 
     pygame.display.flip()
+
+
+def main_menu_settings(events):
+
+    global text, turn, color, running, win, screen, do_input, know_flip, random_flip
+    
+    if know_flip == 1:
+        know_flip_color = (40, 160, 60)
+    else:
+        know_flip_color = (255, 0, 0)
+    
+    if random_flip == 1:
+        random_flip_color = (40, 160, 60)
+    else:
+        random_flip_color = (255, 0, 0)
+
+    if do_input == 0:
+        do_input = 1
+        return
+    screen.fill(menu_color)
+    menu_button(50, 25, 100, 50, "Back", 0, black, white, events, white)
+    menu_button(win_x/2, win_y/3, 200, 100, "Show flip countdown", 8, know_flip_color, white, events, white)
+    menu_button(win_x/2, win_y/3 + 150, 200, 100, "Random Flip Interval", 9, random_flip_color, white, events, white)
+    pygame.display.flip()
+
     
 def main_menu_dif(events):
 
@@ -615,6 +652,7 @@ def menu_button(pos_x, pos_y, width, height, b_text, room_num, back_color, t_col
             running = False
 
 
+
 def grid_flip():
     global grid, b_place_x, b_place_y, p_place_x, p_place_y, grid_2
     b_place_x = []
@@ -659,6 +697,21 @@ while running:
         reset()
         print("reset")
         room = 0
+    if room == 7:
+        main_menu_settings(events) 
+    if room == 8:
+        if know_flip == 1:
+            know_flip = 0
+        else:
+            know_flip = 1
+        room = 7
+    if room == 9:
+        if random_flip == 1:
+            random_flip = 0
+        else:
+            random_flip = 1
+        room = 7
+
 pygame.QUIT 
 
 
