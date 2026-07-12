@@ -8,18 +8,36 @@ from connect_4_ai import winning_move
 from connect_4_ai import get_valid_locations
 import numpy as np
 
+flipping = 0
+play = 1
+fall_speed = 0.05
+random_turn = 1
+chaning = 0
+last_digit = '6'
+number = '6'
 pygame.init()
 pygame.mixer.init()
-turn = 1
+
+random.seed()
+
+turn = random.randint(0, 1)
 win = 0
 space = 4
 color = (0,0,0)
 text = 'Connect 4'
 room = 0
-black = (0, 0, 0)
+act = 0
+
+
+#colors 
+black = (1, 1, 1)
 white = (255, 255, 255)
 gold = (212, 175, 55)
-menu_color = (22, 0, 11)
+
+menu_color = (35, 55, 110)
+
+# 
+
 do_input = 1
 know_flip = 1 
 random_flip = 0
@@ -54,10 +72,10 @@ scale_y = win_y/7
 
 font = pygame.font.SysFont('Arial', 30)
 text_surface = font.render(text, True, text_color)
-text_rect = text_surface.get_rect(center=(win_x/2, win_y/2))
+text_rect = text_surface.get_rect(center=(win_x, win_y))
 text_rect.center = (win_x/2, scale_y/2 - 20)
 
-text_rect_2 = text_surface.get_rect(center=(win_x/2, win_y/2))
+text_rect_2 = text_surface.get_rect(center=(win_x, win_y))
 text_rect_2.center = (win_x/2, scale_y/2 + 20)
 
 b_place_x = []
@@ -72,10 +90,8 @@ f_b_place_y = []
 
 f_p_place_x = []
 f_p_place_y = []
-
-next_flip = 6
-long = next_flip
-
+long = 6
+next_flip = long
 
 time_passed = 0
 running = True 
@@ -106,6 +122,9 @@ p_temp_y = []
 
 
 
+p_fall = {"x": -10000, "y": -100000000000, "row": -1 }
+b_fall =  {"x": -1000000, "y": -100000000, "row": -1 }
+
 
 
 
@@ -129,10 +148,50 @@ def pretty_print_board(board):
         print(row_str+"\033[0m")
 
 
-start_ticks = pygame.time.get_ticks()
 
 
 
+
+def type_box(pos_x, pos_y, width, height, back_color, border_color, t_color, events):
+    global room, running, do_input, long, number, next_flip   
+    mouse_pos = pygame.mouse.get_pos()
+    mouse_x = mouse_pos[0]
+    mouse_y = mouse_pos[1]    
+    b_text = str(long)
+    cen_x = width/2
+    cen_y = height/2
+    new_pos_x = pos_x - cen_x
+    next_flip = long
+    new_pos_y = pos_y - cen_y   
+    pygame.draw.rect(screen, back_color, (new_pos_x, new_pos_y, width, height), 0)
+    pygame.draw.rect(screen, border_color, (new_pos_x, new_pos_y, width, height), round(width * 0.05), 2)
+    text_surface = font.render(b_text, True, t_color)
+                  
+    t_width, t_height = text_surface.get_size()
+    scale_factor = min(width / t_width, height/ t_height)
+    new_width = int((t_width * scale_factor) * 0.8)
+    new_height = int((t_height * scale_factor) * 0.8)
+    text_surface = pygame.transform.smoothscale(text_surface, (new_width, new_height))
+    text_rect = text_surface.get_rect(center=(new_pos_x + cen_x, new_pos_y + cen_y))
+    text_rect.center = (new_pos_x + cen_x, new_pos_y + cen_y)
+    screen.blit(text_surface, text_rect)
+    
+
+    if number == '':
+        long = 0
+    else:
+        long = int(number)
+    for event in events:
+        if event.type == pygame.KEYDOWN:
+            if event.unicode.isnumeric():
+                last_digit = event.unicode
+                number += event.unicode
+                
+            if event.key == pygame.K_BACKSPACE:
+                number = number[:-1]
+
+        if event.type == pygame.QUIT:
+            running = False
 
 
 
@@ -140,23 +199,31 @@ start_ticks = pygame.time.get_ticks()
 
 
 def reset():
-    global grid, b_place_x, b_place_y, p_place_x, p_place_y, turn, win, grid_2, next_flip
+    global grid, b_place_x, play, number, long, b_place_y, act, p_place_x, p_place_y, turn, win, grid_2, next_flip, random_turn, b_temp_x, b_temp_y, p_temp_x, p_temp_y, random_flip, know_flip
     grid_reset(grid)
+    play = 1
     grid_reset(grid_2)
     b_place_x = []
     b_place_y = []
     
     b_temp_x = []
     b_temp_y = []
-    turn = 1
+    turn = random.randint(0, 1)
     win = 0
     p_place_x = []
     p_place_y = []
-    
+    act = 0
+    next_flip = long
     p_temp_x = []
     p_temp_y = []
+
+def reset_settings():
+    global long, number, next_flip, random_flip, know_flip
+    long = 6
+    number = str(long)
     next_flip = long
-    
+    random_flip = 0
+    know_flip = 1
 def grid_reset(which):
     global grid, b_place_x, b_place_y, p_place_x, p_place_y, turn, win, grid_2
     for l in range(6):
@@ -207,7 +274,9 @@ def piece_fall(piece, collum):
                         row = 7
                     
             else:
+                
                 row += 1
+   
                 
         else: 
             grid[row - 1][collum] = piece
@@ -308,18 +377,63 @@ for i in range(7):
 
 
 fall_sound = pygame.mixer.Sound('assets\\fall_sound.wav')
+click_sound = pygame.mixer.Sound('assets\\click_sound.wav')
 win = 0
 
 
 
 
 def main_game_player(events):
-    global text, turn, color, running, win, do_input, b_place_x, b_place_y, next_flip, long, b_temp_x, b_temp_y, p_temp_x, p_temp_y
+    global text, turn, color, flipping, running,p_fall, win, act, b_fall, do_input, b_place_x, b_place_y, next_flip, long, b_temp_x, b_temp_y, p_temp_x, p_temp_y
 
+    b_fall["y"] += fall_speed * scale_x
+    p_fall["y"] += fall_speed * scale_x
+    if flipping == 1:
 
-    until_text = "Turns until next flip: " + str(next_flip)
-    until_next = font.render(until_text, True, text_color)
+        if len(b_temp_y) > 0:
+                flipping = 0
+                print("e")
+                b_fall = {"x": b_temp_x[0], "y": 0, "row": b_temp_y[0] }
+                b_temp_x.pop(0)
+                b_temp_y.pop(0)
+        if len(p_temp_y):
+            flipping = 0
+            print("e")
+            p_fall = {"x": p_temp_x[0], "y": 0, "row": p_temp_y[0] }
+            p_temp_x.pop(0)
+            p_temp_y.pop(0)
+    
+    if b_fall ["y"] >= b_fall["row"]:
+        b_fall["y"] = b_fall["row"]
+        if flipping == 1:
+            turn = 0
+            next_flip -= 1
+        b_place_x.append(b_fall["x"])
+        b_place_y.append(b_fall["y"])
 
+        b_fall["x"] = -10000
+        b_fall["y"] = -1000000
+        fall_sound.play()
+        do_input = 1
+        win = win_con()
+        flipping = 1
+
+    if p_fall ["y"] >= p_fall["row"]:
+        p_fall["y"] = p_fall["row"]
+        if flipping == 1:
+            turn = 1
+            next_flip -= 1
+        p_place_x.append(p_fall["x"])
+        p_place_y.append(p_fall["y"])  
+        p_fall["x"] = -10000
+        p_fall["y"] = -1000000
+        fall_sound.play()
+        do_input = 1
+      
+        win = win_con()
+        flipping = 1
+
+        
 
 
 
@@ -329,6 +443,7 @@ def main_game_player(events):
         time.sleep(0.05)
         
         grid_flip()
+        win = win_con()
         if random_flip == 1:
             next_flip = random.randint(1, 6)
         else:
@@ -336,22 +451,21 @@ def main_game_player(events):
         
     if do_input == 0:
         do_input = 1
-        return
     if math.prod(grid[0])> 0:
         text = 'Tie'
-    text_surface = font.render(text, True, text_color)
     screen.fill((204,196,18))
     pygame.draw.rect(screen, color, (0, 0, win_x, scale_y), 0)
-    
+    if know_flip == 1:
+        make_text("Turns until next flip: " + str(next_flip), win_x/2, scale_y/2 + 20, white)
+    make_text(text, win_x/2, scale_y/2 - 20, white)
     menu_button(25, 12.5, 50, 25, "Back", 0, black, white, events, white)
     
     mouse_pos = pygame.mouse.get_pos()
     mouse_x = mouse_pos[0]
+    mouse_y = mouse_pos[1]
 
-    
-    screen.blit(text_surface, text_rect)
-    if know_flip == 1:
-        screen.blit(until_next, text_rect_2)
+    mouse_collum = float(mouse_x/scale_x)
+    mouse_collum = math.floor(mouse_collum)
 
     
     #switch between turns
@@ -369,20 +483,28 @@ def main_game_player(events):
     #place images on screen    
     for i in range(len(border_x)):
         screen.blit(border_img, (border_x[i], border_y[i] + scale_x))
+    if turn == 1:
+        screen.blit(blue_img, (mouse_collum *  scale_x, scale_y - 50))
+    else:
+        screen.blit(pink_img, (mouse_collum *  scale_x, scale_y - 50))
     if len(b_place_y) > 0:
         for i in range(len(b_place_y)):
+    
             screen.blit(blue_img, (b_place_x[i], b_place_y[i]))
     for i in range(len(p_place_y)):
-        screen.blit(pink_img, (p_place_x[i] + 2, p_place_y[i]))
+        screen.blit(pink_img, (p_place_x[i], p_place_y[i]))
     #animate falling 
-    for i in range(len(b_temp_y)):
-        screen.blit(blue_img, (b_temp_x[i], b_temp_y[i]))
-    for i in range(len(p_temp_y)):
-        screen.blit(pink_img, (p_temp_x[i], p_temp_y[i]))  
+
+    screen.blit(blue_img, (b_fall["x"], b_fall["y"]))
+    screen.blit(pink_img, (p_fall["x"], p_fall["y"]))
         
     pygame.display.flip()
 
 
+       
+        
+       
+   
 
                 
     
@@ -392,44 +514,37 @@ def main_game_player(events):
                 running = False
             if event.type == pygame.MOUSEBUTTONDOWN:
                 if win == 0:
-                    if event.button == 1:
-
+                    if event.button == 1 and mouse_y > 25:
+                        act = 1
 
                         #detrime what column mouse is in
-                        collum = float(mouse_x/scale_x)
-                        collum = math.floor(collum)
+
                         
                         #place piece in correct column
-                        row = piece_fall(target, collum)
+                        row = piece_fall(target, mouse_collum)
 
-                        place_x = collum * scale_x 
+                        place_x = mouse_collum * scale_x 
                         place_y = row * scale_y 
                         if row > 0:
                             
-                            fall_sound.play()
                             
                             if turn == 0:
                                 
+                                p_fall = {"x": place_x, "y": 0, "row": place_y }
+                                do_input = 0
                                 
-                                
-                                p_place_x.append(place_x)
-                                p_place_y.append(place_y)
-                                f_p_place_x.append(abs(place_x - win_x))
-                                f_p_place_y.append(abs(place_y - (win_y - scale_y)))
-                                turn = 1
+
                             else: 
-                                b_place_x.append(place_x)
-                                b_place_y.append(place_y)
-                                f_p_place_x.append(abs(place_x - win_x))
-                                f_p_place_y.append(abs(place_y - (win_y - scale_y)))
-                                turn = 0
-                            next_flip -= 1
-                        win = win_con()
+                                b_fall = {"x": place_x, "y": 0, "row": place_y }
+                                do_input = 0
+
+
             if event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_e:
                     #print(grid)
-                    pretty_print_board(grid)
-                    print(math.prod(grid[0][0:9]))
+                    matrix = np.array(grid)
+                    matrix = matrix[::-1]
+                    pretty_print_board(matrix)
                 if event.key == pygame.K_g:
                     print("no more debugging for you")
    
@@ -437,19 +552,44 @@ def main_game_player(events):
 
 
 def main_game_ai(events, depth):
-    global text, turn, color, running, win, do_input, b_place_x, b_place_y, next_flip, long
+    global text, turn,b_fall, play, p_fall, color, running, win, do_input, b_place_x, b_place_y, act, next_flip, long
 
 
-    until_text = "Turns until next flip: " + str(next_flip)
-    until_next = font.render(until_text, True, text_color)
+    b_fall["y"] += fall_speed * scale_x
+    p_fall["y"] += fall_speed * scale_x
+    
+    if b_fall ["y"] >= b_fall["row"]:
+        b_fall["y"] = b_fall["row"]
+        b_place_x.append(b_fall["x"])
+        b_place_y.append(b_fall["y"])
+        turn = 0
+        next_flip -= 1
+        b_fall["x"] = -10000
+        b_fall["y"] = -1000000
+        fall_sound.play()
+        win = win_con()
+        do_input = 1
+        play = 1
+    if p_fall ["y"] >= p_fall["row"]:
+        p_fall["y"] = p_fall["row"]
+        fall_sound.play()
 
-
+        p_place_x.append(p_fall["x"])
+        p_place_y.append(p_fall["y"])
+        win = win_con()    
+        turn = 1
+        next_flip -= 1
+        p_fall["x"] = -10000
+        p_fall["y"] = -1000000
+        do_input = 1
+        win = win_con()    
 
     if next_flip == 0:
         do_input = 0
         time.sleep(0.05)
         
         grid_flip()
+        win = win_con()
         if random_flip == 1:
             next_flip = random.randint(1, 6)
         else:
@@ -468,55 +608,68 @@ def main_game_ai(events, depth):
     
     mouse_pos = pygame.mouse.get_pos()
     mouse_x = mouse_pos[0]
-
+    mouse_y = mouse_pos[1]
+    mouse_collum = float(mouse_x/scale_x)
+    mouse_collum = math.floor(mouse_collum)
     
-    screen.blit(text_surface, text_rect)
-    if know_flip == 1:
-        screen.blit(until_next, text_rect_2)
+
 
     
     #switch between turns
     if win == 0:
         if turn == 1: 
             target = 1 #b
+
+
             text = 'Blue Turn'
             color = (0, 56, 168)
             #timer(current_time, time_passed)
 
         else: 
             text = 'Pink Turn'
+
             target = 2
             color = (214, 2, 112)
             matrix = np.array(grid[::-1])
-            collumn = minimax(matrix, depth,  -math.inf, math.inf, True)   
-            score = collumn[1]
-            collumn = collumn[0]
-            print(collumn) 
-            if collumn == None or score == 0:
-                collumn = random.randint(0, 6)
-            row = piece_fall(target, collumn)
-            place_x = collumn * scale_x 
-            place_y = row * scale_y 
-            
-            p_place_x.append(place_x)
-            
-            p_place_y.append(place_y)
-            win = win_con()    
-            turn = 1
 
-    #place images on screen    
+            if play == 1:
+                collumn = minimax(matrix, depth,  -math.inf, math.inf, True)   
+                score = collumn[1]
+                collumn = collumn[0]
+                print(collumn) 
+                if collumn == None or score == 0:
+                    collumn = random.randint(0, 6)
+                row = piece_fall(target, collumn)
+                place_x = collumn * scale_x 
+                place_y = row * scale_y  
+                p_fall = {"x": place_x, "y": 0, "row": place_y }
+                play = 0
+            act = 1
+            play = 0
+    #place images on screen   
+
     for i in range(len(border_x)):
-        screen.blit(border_img, (border_x[i], border_y[i] + scale_x))
+                screen.blit(border_img, (border_x[i], border_y[i] + scale_x))
+    if turn == 1:
+        screen.blit(blue_img, (mouse_collum *  scale_x, scale_y - 50))
     if len(b_place_y) > 0:
         for i in range(len(b_place_y)):
             screen.blit(blue_img, (b_place_x[i], b_place_y[i]))
     for i in range(len(p_place_y)):
         screen.blit(pink_img, (p_place_x[i], p_place_y[i]))
+    screen.blit(pink_img, (p_fall["x"], p_fall["y"]))
+    screen.blit(blue_img, (b_fall["x"], b_fall["y"]))
 
+
+    if know_flip == 1:
+        make_text("Turns until next flip: " + str(next_flip), win_x/2, scale_y/2 + 20, white)
+    make_text(text, win_x/2, scale_y/2 - 20, white)
+   
         
     pygame.display.flip()
 
 
+    
 
                 
     
@@ -526,35 +679,29 @@ def main_game_ai(events, depth):
                 running = False
             if event.type == pygame.MOUSEBUTTONDOWN:
                 if win == 0:
-                    if event.button == 1:
+                    if event.button == 1 and mouse_y > 25:
 
-
+                        act = 1
                         #detrime what column mouse is in
-                        collum = float(mouse_x/scale_x)
-                        collum = math.floor(collum)
+
                         
                         #place piece in correct column
-                        row = piece_fall(target, collum)
-                        place_x = collum * scale_x 
+                        row = piece_fall(target, mouse_collum)
+                        place_x = mouse_collum * scale_x 
                         place_y = row * scale_y 
                         if row > 0:
                             
-                            fall_sound.play()
                             
                             if turn == 0:
                                 
                                 
                                 
 
-                                turn = 1
+                               pass
                             else: 
-                                b_place_x.append(place_x)
-                                b_place_y.append(place_y)
-                                f_p_place_x.append(abs(place_x - win_x))
-                                f_p_place_y.append(abs(place_y - (win_y - scale_y)))
-                                turn = 0
-                            next_flip -= 1
-                        win = win_con()
+                                b_fall = {"x": place_x, "y": 0, "row": place_y }
+                                do_input = 0
+
             if event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_e:
                     #print(grid)
@@ -573,9 +720,17 @@ def main_menu(events):
         do_input = 1
         return
     screen.fill(menu_color)
+    make_text("Connect 4: Flip", win_x/2, win_y/3 - 180, white)
+
+    if act == 1:
+        reset_color = (255, 15, 15)
+    else:
+        reset_color = black
+           
     menu_button(win_x/2, win_y/3, 200, 100, "Player Vs Player", 1, black, white, events, white)
     menu_button(win_x/2, win_y/3 + 150, 200, 100, "Player Vs AI", 2, black, white, events, white)
     menu_button(win_x/2, win_y/3 + 300, 200, 100, "Settings", 7, black, white, events, white)
+    menu_button(50, 25, 100, 50, "Reset", 6, reset_color, white, events, white)
 
     pygame.display.flip()
 
@@ -584,6 +739,8 @@ def main_menu_settings(events):
 
     global text, turn, color, running, win, screen, do_input, know_flip, random_flip
     
+    
+
     if know_flip == 1:
         know_flip_color = (40, 160, 60)
     else:
@@ -598,9 +755,19 @@ def main_menu_settings(events):
         do_input = 1
         return
     screen.fill(menu_color)
-    menu_button(50, 25, 100, 50, "Back", 0, black, white, events, white)
-    menu_button(win_x/2, win_y/3, 200, 100, "Show flip countdown", 8, know_flip_color, white, events, white)
-    menu_button(win_x/2, win_y/3 + 150, 200, 100, "Random Flip Interval", 9, random_flip_color, white, events, white)
+    make_text("Settings", win_x/2, win_y/3 - 150, white)
+    make_text("Flip Interval = Amount of Turns Between Flips", win_x/2, win_y/3 - 100, white)
+
+    if chaning == 1:
+        type_box(win_x/2, win_y/2, 200, 100, black, white, white, events)
+        menu_button(50, 25, 100, 50, "Back", 10, black, white, events, white)
+    else:
+        menu_button(50, 25, 100, 50, "Back", 0, black, white, events, white)
+        menu_button(win_x - 50, win_y - 25, 100, 50, "Default settings", 11, black, white, events, white)
+        menu_button(win_x/2, win_y/3, 200, 100, "Show flip countdown", 8, know_flip_color, white, events, white)
+        menu_button(win_x/2, win_y/3 + 150, 200, 100, "Random Flip Interval", 9, random_flip_color, white, events, white)
+        if random_flip == 0:
+            menu_button(win_x/2, win_y/3 + 300, 200, 100, "Change Flip Interval", 10, black, white, events, white)    
     pygame.display.flip()
 
     
@@ -619,16 +786,35 @@ def main_menu_dif(events):
     pygame.display.flip()
 
 
+
+
+def make_text(text, pos_x, pos_y, t_color):
+    global screen, font
+    cen_x = pos_x/2
+    cen_y = pos_y/2
+    text_surface = font.render(text, True, t_color)
+    text_rect = text_surface.get_rect(center=(pos_x, pos_y ))
+    text_rect.center = (pos_x, pos_y)
+    screen.blit(text_surface, text_rect)
+
 def menu_button(pos_x, pos_y, width, height, b_text, room_num, back_color, t_color, events, border_color):
     global room, running, do_input   
+    mouse_pos = pygame.mouse.get_pos()
+    mouse_x = mouse_pos[0]
+    mouse_y = mouse_pos[1]    
+    
     cen_x = width/2
     cen_y = height/2
     new_pos_x = pos_x - cen_x
-    new_pos_y = pos_y - cen_y
+    if mouse_x >= new_pos_x and mouse_x <= new_pos_x + width and mouse_y >= pos_y - cen_y and mouse_y <= pos_y + cen_y:
+      new_pos_y= (pos_y - cen_y) - 5
+      back_color = tuple(min(255, x + 40) for x in back_color)
+    else:
+        new_pos_y = pos_y - cen_y   
     pygame.draw.rect(screen, back_color, (new_pos_x, new_pos_y, width, height), 0)
     pygame.draw.rect(screen, border_color, (new_pos_x, new_pos_y, width, height), round(width * 0.05), 2)
     text_surface = font.render(b_text, True, t_color)
-
+                  
     t_width, t_height = text_surface.get_size()
     scale_factor = min(width / t_width, height/ t_height)
     new_width = int((t_width * scale_factor) * 0.8)
@@ -638,14 +824,14 @@ def menu_button(pos_x, pos_y, width, height, b_text, room_num, back_color, t_col
     text_rect.center = (new_pos_x + cen_x, new_pos_y + cen_y)
     screen.blit(text_surface, text_rect)
     
-    mouse_pos = pygame.mouse.get_pos()
-    mouse_x = mouse_pos[0]
-    mouse_y = mouse_pos[1]
+
+  
     for event in events:
         if event.type == pygame.MOUSEBUTTONDOWN and do_input == 1:
             if event.button == 1:
                 if mouse_x >= new_pos_x and mouse_x <= new_pos_x + width and mouse_y >= new_pos_y and mouse_y <= new_pos_y + height:
-                        
+                        click_sound.play()
+                        time.sleep(0.05)
                         room = room_num
                         do_input = 0
         if event.type == pygame.QUIT:
@@ -654,7 +840,7 @@ def menu_button(pos_x, pos_y, width, height, b_text, room_num, back_color, t_col
 
 
 def grid_flip():
-    global grid, b_place_x, b_place_y, p_place_x, p_place_y, grid_2
+    global grid, b_place_x, b_place_y, p_place_x, p_place_y, grid_2, b_fall, p_fall, flipping
     b_place_x = []
     b_place_y = []
     
@@ -664,19 +850,25 @@ def grid_flip():
         for l in range(6): 
             if grid[l][i] == 1:
                 row_2 = piece_fall2(1, abs(h_flip - i)) 
-                b_place_x.append(abs((h_flip - i)) * scale_x)
-                b_place_y.append(row_2 * scale_y)
+                
+                b_temp_x.append(abs((h_flip - i)) * scale_x)
+                b_temp_y.append(row_2 * scale_y)
+                print(b_temp_y)
+                #b_place_x.append(abs((h_flip - i)) * scale_x)
+                #b_place_y.append(row_2 * scale_y)
             elif grid[l][i] == 2:
                 row_2 = piece_fall2(2, abs(h_flip- i)) 
-                p_place_x.append(abs((h_flip - i)) * scale_x)
-                p_place_y.append(row_2 * scale_y)
-  
+                #p_place_x.append(abs((h_flip - i)) * scale_x)
+                #p_place_y.append(row_2 * scale_y)
+                
+                p_temp_x.append(abs((h_flip - i)) * scale_x)
+                p_temp_y.append(row_2 * scale_y)            
+     
     for l in range(6):
         for i in range(7):
             grid[l][i] = grid_2[l][i]
     grid_reset(grid_2)
-    win_con()
-
+    flipping = 1
 while running:
     events = pygame.event.get()
     
@@ -691,7 +883,7 @@ while running:
     if room == 4:
         main_game_ai(events, 5)
     if room == 5:
-        main_game_ai(events, 8)
+        main_game_ai(events, 6)
     if room == 6:
         #rest grid
         reset()
@@ -711,7 +903,15 @@ while running:
         else:
             random_flip = 1
         room = 7
-
+    if room == 10:
+        if chaning == 1:
+            chaning = 0
+        else:
+            chaning = 1
+        room = 7
+    if room == 11:
+        reset_settings()
+        room = 7
 pygame.QUIT 
 
 
