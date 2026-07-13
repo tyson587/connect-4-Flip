@@ -7,9 +7,23 @@ PLAYER_PIECE = 1
 BOT_PIECE = 2
 WINDOW_LENGTH = 4
 
+import numpy as np
 
 import random
 
+def flip_board(board):
+    new_board = np.zeros_like(board)
+
+    for col in range(COLUMN_COUNT):
+
+        flipped = board[::-1, col]
+
+        for piece in flipped:
+            if piece != EMPTY:
+                row = get_next_open_row(new_board, col)
+                drop_piece(new_board, row, col, piece)
+
+    return new_board
 
 def get_valid_locations(board):
     valid_locations = []
@@ -123,7 +137,14 @@ def winning_move(board, piece):
 def is_terminal_node(board):
     return winning_move(board, PLAYER_PIECE) or winning_move(board, BOT_PIECE) or len(get_valid_locations(board)) == 0
 
-def minimax(board, depth, alpha, beta, maximisingPlayer):
+def minimax(board, depth, alpha, beta, maximisingPlayer, turns_until_flip, know):
+    if know == 1:
+        turns_until_flip -= 1
+        
+        if turns_until_flip < 0:
+            board = flip_board(board)
+            turns_until_flip = 999
+    
     valid_locations = get_valid_locations(board)
 
     is_terminal = is_terminal_node(board)
@@ -151,7 +172,7 @@ def minimax(board, depth, alpha, beta, maximisingPlayer):
             b_copy = board.copy()
             # Drop a piece in the temporary board and record score
             drop_piece(b_copy, row, col, BOT_PIECE)
-            new_score = minimax(b_copy, depth - 1, alpha, beta, False)[1]
+            new_score = minimax(b_copy, depth - 1, alpha, beta, False, turns_until_flip, know)[1]
             if new_score > value:
                 value = new_score
                 # Make 'column' the best scoring column we can get
@@ -171,7 +192,7 @@ def minimax(board, depth, alpha, beta, maximisingPlayer):
             b_copy = board.copy()
             # Drop a piece in the temporary board and record score
             drop_piece(b_copy, row, col, PLAYER_PIECE)
-            new_score = minimax(b_copy, depth - 1, alpha, beta, True)[1]
+            new_score = minimax(b_copy, depth - 1, alpha, beta, True, turns_until_flip, know)[1]
             if new_score < value:
                 value = new_score
                 # Make 'column' the best scoring column we can get

@@ -1,3 +1,6 @@
+
+
+import asyncio
 import time
 import pygame
 import sys
@@ -8,6 +11,9 @@ from connect_4_ai import winning_move
 from connect_4_ai import get_valid_locations
 import numpy as np
 
+
+sound = 1
+falling = 0
 flipping = 0
 play = 1
 fall_speed = 0.05
@@ -33,7 +39,8 @@ act = 0
 black = (1, 1, 1)
 white = (255, 255, 255)
 gold = (212, 175, 55)
-
+blue_color =(0, 56, 168)
+pink_color = (214, 2, 112)
 menu_color = (35, 55, 110)
 
 # 
@@ -93,7 +100,6 @@ f_p_place_y = []
 long = 6
 next_flip = long
 
-time_passed = 0
 running = True 
 
 grid_2 = [[0,0,0,0,0,0,0],
@@ -124,7 +130,8 @@ p_temp_y = []
 
 p_fall = {"x": -10000, "y": -100000000000, "row": -1 }
 b_fall =  {"x": -1000000, "y": -100000000, "row": -1 }
-
+p_flip = {"x": -10000, "y": -100000000000, "row": -1 }
+b_flip =  {"x": -1000000, "y": -100000000, "row": -1 }
 
 
 
@@ -210,6 +217,8 @@ def reset():
     b_temp_y = []
     turn = random.randint(0, 1)
     win = 0
+    sound = 1
+    falling = 0
     p_place_x = []
     p_place_y = []
     act = 0
@@ -292,19 +301,21 @@ def win_con():
     #check if i - i+3 is equal to 1 blue wins if equal to 16 pink wins ``
     #max i =3 3 x 
     #max i = 2 y
-    global text, win
+    global text, win, color
     for k in range(6):
         for i in range(4):
             if math.prod(grid[k][i:i + 4]) == 1:
                 print("blue wins H")
                 text = 'Blue Wins'
+                
                 win = 1 
-                                         
+                color = blue_color                        
                     
             elif math.prod(grid[k][i:i + 4]) == 16:
                 print("Pink wins H")
                 text = 'Pink Wins'
                 win = 1
+                color = pink_color
                     
         #vertical wins
 
@@ -314,11 +325,13 @@ def win_con():
             if math.prod(vertical) == 1:
                 print("blue wins V")
                 text = 'Blue Wins'
-                win = 1                    
+                win = 1      
+                color = blue_color                                 
             elif math.prod(vertical) == 16:
                 print("Pink wins V")
                 text = 'Pink Wins'
                 win = 1
+                color = pink_color
         #D wins 
     for l in range(4):
         for i in range(3):
@@ -326,11 +339,14 @@ def win_con():
             if math.prod(dia) == 1:
                 print("blue wins D")
                 text = 'Blue Wins'
-                win = 1                    
+                win = 1              
+                color = blue_color               
+                      
             elif math.prod(dia) == 16:
                 print("Pink wins D")
                 text = 'Pink Wins'
                 win = 1
+                color = pink_color
                 
     for l in range(4):
         for i in range(3,6):
@@ -338,13 +354,15 @@ def win_con():
             if math.prod(dia2) == 1:
                 print("blue wins D")
                 text = 'Blue Wins'
-                win = 1                    
+                win = 1              
+                color = blue_color                   
+                      
             elif math.prod(dia2) == 16:
                 print("Pink wins D")
                 text = 'Pink Wins'
                 win = 1
+                color = pink_color
 
-    #not working, less than 1% chance of tie so
     if math.prod(grid[0])> 0:
         text = 'Tie'
         
@@ -376,65 +394,103 @@ for i in range(7):
         border_y.append(k * scale_y)
 
 
-fall_sound = pygame.mixer.Sound('assets\\fall_sound.wav')
-click_sound = pygame.mixer.Sound('assets\\click_sound.wav')
+fall_sound = pygame.mixer.Sound('assets\\fall_sound.ogg')
+click_sound = pygame.mixer.Sound('assets\\click_sound.ogg')
+win_sound = pygame.mixer.Sound('assets\\win_sound.ogg')
+
 win = 0
 
 
 
 
-def main_game_player(events):
-    global text, turn, color, flipping, running,p_fall, win, act, b_fall, do_input, b_place_x, b_place_y, next_flip, long, b_temp_x, b_temp_y, p_temp_x, p_temp_y
 
+def main_game_player(events):
+    global text,ani, sound, b_flip, p_flip, falling, turn, color, flipping, pink, running,p_fall, win, act, b_fall, do_input, b_place_x, b_place_y, next_flip, long, b_temp_x, b_temp_y, p_temp_x, p_temp_y
+
+    if win == 1 and sound == 1:
+        win_sound.play()
+        sound = 0
+
+        
     b_fall["y"] += fall_speed * scale_x
     p_fall["y"] += fall_speed * scale_x
-    if flipping == 1:
-
-        if len(b_temp_y) > 0:
-                flipping = 0
-                print("e")
-                b_fall = {"x": b_temp_x[0], "y": 0, "row": b_temp_y[0] }
+    
+    
+    b_flip["y"] += fall_speed * scale_x
+    p_flip["y"] += fall_speed * scale_x
+    if len(b_temp_y) > 0:
+            if b_flip["x"] < -100:
+                b_flip = {"x": b_temp_x[0], "y": 0, "row": b_temp_y[0] }
                 b_temp_x.pop(0)
                 b_temp_y.pop(0)
-        if len(p_temp_y):
-            flipping = 0
-            print("e")
-            p_fall = {"x": p_temp_x[0], "y": 0, "row": p_temp_y[0] }
+                flipping = 0
+
+    if len(p_temp_y):
+        flipping = 0
+        print("e")
+        if p_flip["x"] < -100:
+            p_flip = {"x": p_temp_x[0], "y": 0, "row": p_temp_y[0] }
             p_temp_x.pop(0)
             p_temp_y.pop(0)
+            flipping = 0
+
     
     if b_fall ["y"] >= b_fall["row"]:
         b_fall["y"] = b_fall["row"]
-        if flipping == 1:
-            turn = 0
-            next_flip -= 1
+        turn = 0
+        next_flip -= 1
         b_place_x.append(b_fall["x"])
         b_place_y.append(b_fall["y"])
 
         b_fall["x"] = -10000
         b_fall["y"] = -1000000
         fall_sound.play()
-        do_input = 1
         win = win_con()
-        flipping = 1
+        falling = 0
+        pink = 1
 
     if p_fall ["y"] >= p_fall["row"]:
         p_fall["y"] = p_fall["row"]
-        if flipping == 1:
-            turn = 1
-            next_flip -= 1
+        turn = 1
+        next_flip -= 1
         p_place_x.append(p_fall["x"])
-        p_place_y.append(p_fall["y"])  
+        p_place_y.append(p_fall["y"]) 
         p_fall["x"] = -10000
         p_fall["y"] = -1000000
         fall_sound.play()
-        do_input = 1
-      
+        pink = 0
         win = win_con()
-        flipping = 1
+        falling = 0
+    
+    if b_flip ["y"] >= b_flip ["row"]:
+        b_flip["y"] = b_flip ["row"]
 
+        b_place_x.append(b_flip ["x"])
+        b_place_y.append(b_flip ["y"])
+
+        b_flip["x"] = -10000
+        b_flip["y"] = -1000000
+        fall_sound.play()
+        win = win_con()
+        if len(p_temp_x) < 1 and len(b_temp_x) < 1 and b_flip["x"] < 0 and p_flip["x"] < 0:
+            falling = 0
+
+    if p_flip ["y"] >= p_flip["row"]:
+        p_flip["y"] = p_flip["row"]
+
+        p_place_x.append(p_flip["x"])
+        p_place_y.append(p_flip["y"]) 
+        p_flip["x"] = -10000
+        p_flip["y"] = -1000000
+        fall_sound.play()
+        win = win_con()
+        if len(p_temp_x) < 1 and len(b_temp_x) < 1 and b_flip["x"] < 0 and p_flip["x"] < 0:
+            falling = 0
         
-
+    
+    
+    if len(b_temp_x) > 0 or len(p_temp_x) > 0:
+        falling = 1
 
 
 
@@ -451,6 +507,7 @@ def main_game_player(events):
         
     if do_input == 0:
         do_input = 1
+        return
     if math.prod(grid[0])> 0:
         text = 'Tie'
     screen.fill((204,196,18))
@@ -473,13 +530,13 @@ def main_game_player(events):
         if turn == 1: 
             target = 1 #b
             text = 'Blue Turn'
-            color = (0, 56, 168)
+            color = blue_color
             #timer(current_time, time_passed)
 
         else: 
             text = 'Pink Turn'
             target = 2
-            color = (214, 2, 112)
+            color = pink_color
     #place images on screen    
     for i in range(len(border_x)):
         screen.blit(border_img, (border_x[i], border_y[i] + scale_x))
@@ -497,7 +554,9 @@ def main_game_player(events):
 
     screen.blit(blue_img, (b_fall["x"], b_fall["y"]))
     screen.blit(pink_img, (p_fall["x"], p_fall["y"]))
-        
+
+    screen.blit(blue_img, (b_flip["x"], b_flip["y"]))
+    screen.blit(pink_img, (p_flip["x"], p_flip["y"]))
     pygame.display.flip()
 
 
@@ -514,7 +573,7 @@ def main_game_player(events):
                 running = False
             if event.type == pygame.MOUSEBUTTONDOWN:
                 if win == 0:
-                    if event.button == 1 and mouse_y > 25:
+                    if event.button == 1 and mouse_y > 25 and falling == 0:
                         act = 1
 
                         #detrime what column mouse is in
@@ -527,7 +586,7 @@ def main_game_player(events):
                         place_y = row * scale_y 
                         if row > 0:
                             
-                            
+                            falling = 1
                             if turn == 0:
                                 
                                 p_fall = {"x": place_x, "y": 0, "row": place_y }
@@ -552,38 +611,98 @@ def main_game_player(events):
 
 
 def main_game_ai(events, depth):
-    global text, turn,b_fall, play, p_fall, color, running, win, do_input, b_place_x, b_place_y, act, next_flip, long
+    global text, falling, sound, b_flip,p_flip,flipping, turn,b_fall, play, p_fall, color, running, win, do_input, b_place_x, b_place_y, act, next_flip, long
 
+    if win == 1 and sound == 1:
+        win_sound.play()
+        sound = 0
 
+        
     b_fall["y"] += fall_speed * scale_x
     p_fall["y"] += fall_speed * scale_x
     
+    
+    b_flip["y"] += fall_speed * scale_x
+    p_flip["y"] += fall_speed * scale_x
+    if len(b_temp_y) > 0:
+            print("e")
+            if b_flip["x"] < -100:
+                b_flip = {"x": b_temp_x[0], "y": 0, "row": b_temp_y[0] }
+                b_temp_x.pop(0)
+                b_temp_y.pop(0)
+                flipping = 0
+
+    if len(p_temp_y):
+        flipping = 0
+        print("e")
+        if p_flip["x"] < -100:
+            p_flip = {"x": p_temp_x[0], "y": 0, "row": p_temp_y[0] }
+            p_temp_x.pop(0)
+            p_temp_y.pop(0)
+            flipping = 0
+
+    
     if b_fall ["y"] >= b_fall["row"]:
         b_fall["y"] = b_fall["row"]
-        b_place_x.append(b_fall["x"])
-        b_place_y.append(b_fall["y"])
         turn = 0
         next_flip -= 1
+        b_place_x.append(b_fall["x"])
+        b_place_y.append(b_fall["y"])
+
         b_fall["x"] = -10000
         b_fall["y"] = -1000000
         fall_sound.play()
         win = win_con()
-        do_input = 1
-        play = 1
+        falling = 0
+        pink = 1
+
     if p_fall ["y"] >= p_fall["row"]:
         p_fall["y"] = p_fall["row"]
-        fall_sound.play()
-
-        p_place_x.append(p_fall["x"])
-        p_place_y.append(p_fall["y"])
-        win = win_con()    
         turn = 1
         next_flip -= 1
+        p_place_x.append(p_fall["x"])
+        p_place_y.append(p_fall["y"]) 
         p_fall["x"] = -10000
         p_fall["y"] = -1000000
-        do_input = 1
-        win = win_con()    
+        fall_sound.play()
+        pink = 0
+        win = win_con()
+        falling = 0
+    
+    if b_flip ["y"] >= b_flip ["row"]:
+        b_flip["y"] = b_flip ["row"]
 
+        b_place_x.append(b_flip ["x"])
+        b_place_y.append(b_flip ["y"])
+
+        b_flip["x"] = -10000
+        b_flip["y"] = -1000000
+        fall_sound.play()
+        win = win_con()
+        if len(p_temp_x) < 1 and len(b_temp_x) < 1 and b_flip["x"] < 0 and p_flip["x"] < 0:
+            falling = 0
+
+    if p_flip ["y"] >= p_flip["row"]:
+        p_flip["y"] = p_flip["row"]
+
+        p_place_x.append(p_flip["x"])
+        p_place_y.append(p_flip["y"]) 
+        p_flip["x"] = -10000
+        p_flip["y"] = -1000000
+        fall_sound.play()
+        win = win_con()
+        if len(p_temp_x) < 1 and len(b_temp_x) < 1 and b_flip["x"] < 0 and p_flip["x"] < 0:
+            falling = 0
+        
+    
+    
+    if len(b_temp_x) > 0 or len(p_temp_x) > 0:
+        falling = 1
+
+
+
+
+        
     if next_flip == 0:
         do_input = 0
         time.sleep(0.05)
@@ -604,7 +723,7 @@ def main_game_ai(events, depth):
     screen.fill((204,196,18))
     pygame.draw.rect(screen, color, (0, 0, win_x, scale_y), 0)
     
-    menu_button(25, 12.5, 50, 25, "Back", 0, black, white, events, white)
+    menu_button(25, 12.5, 50, 25, "Back", 2, black, white, events, white)
     
     mouse_pos = pygame.mouse.get_pos()
     mouse_x = mouse_pos[0]
@@ -612,7 +731,8 @@ def main_game_ai(events, depth):
     mouse_collum = float(mouse_x/scale_x)
     mouse_collum = math.floor(mouse_collum)
     
-
+    if turn == 0 and falling < 0 and st == 0:
+        play == 1
 
     
     #switch between turns
@@ -632,8 +752,8 @@ def main_game_ai(events, depth):
             color = (214, 2, 112)
             matrix = np.array(grid[::-1])
 
-            if play == 1:
-                collumn = minimax(matrix, depth,  -math.inf, math.inf, True)   
+            if falling == 0:
+                collumn = minimax(matrix, depth,  -math.inf, math.inf, True, next_flip, know_flip)   
                 score = collumn[1]
                 collumn = collumn[0]
                 print(collumn) 
@@ -643,6 +763,7 @@ def main_game_ai(events, depth):
                 place_x = collumn * scale_x 
                 place_y = row * scale_y  
                 p_fall = {"x": place_x, "y": 0, "row": place_y }
+                falling = 1
                 play = 0
             act = 1
             play = 0
@@ -659,6 +780,9 @@ def main_game_ai(events, depth):
         screen.blit(pink_img, (p_place_x[i], p_place_y[i]))
     screen.blit(pink_img, (p_fall["x"], p_fall["y"]))
     screen.blit(blue_img, (b_fall["x"], b_fall["y"]))
+    
+    screen.blit(pink_img, (p_flip["x"], p_flip["y"]))
+    screen.blit(blue_img, (b_flip["x"], b_flip["y"]))
 
 
     if know_flip == 1:
@@ -679,10 +803,9 @@ def main_game_ai(events, depth):
                 running = False
             if event.type == pygame.MOUSEBUTTONDOWN:
                 if win == 0:
-                    if event.button == 1 and mouse_y > 25:
+                    if event.button == 1 and mouse_y > 25 and falling == 0:
 
                         act = 1
-                        #detrime what column mouse is in
 
                         
                         #place piece in correct column
@@ -700,7 +823,7 @@ def main_game_ai(events, depth):
                                pass
                             else: 
                                 b_fall = {"x": place_x, "y": 0, "row": place_y }
-                                do_input = 0
+                                falling = 1
 
             if event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_e:
@@ -841,6 +964,8 @@ def menu_button(pos_x, pos_y, width, height, b_text, room_num, back_color, t_col
 
 def grid_flip():
     global grid, b_place_x, b_place_y, p_place_x, p_place_y, grid_2, b_fall, p_fall, flipping
+    
+    #clear out old visuals 
     b_place_x = []
     b_place_y = []
     
@@ -862,56 +987,67 @@ def grid_flip():
                 #p_place_y.append(row_2 * scale_y)
                 
                 p_temp_x.append(abs((h_flip - i)) * scale_x)
-                p_temp_y.append(row_2 * scale_y)            
-     
+                p_temp_y.append(row_2 * scale_y)
+                            
+     #make the main grid match the temp grid
     for l in range(6):
         for i in range(7):
             grid[l][i] = grid_2[l][i]
+            
+    #clear the temp grid
     grid_reset(grid_2)
-    flipping = 1
-while running:
-    events = pygame.event.get()
     
-    if room == 0:
-        main_menu(events)
-    if room == 1:
-        main_game_player(events)
-    if room == 2:
-        main_menu_dif(events)
-    if room == 3:
-        main_game_ai(events, 2)
-    if room == 4:
-        main_game_ai(events, 5)
-    if room == 5:
-        main_game_ai(events, 6)
-    if room == 6:
-        #rest grid
-        reset()
-        print("reset")
-        room = 0
-    if room == 7:
-        main_menu_settings(events) 
-    if room == 8:
-        if know_flip == 1:
-            know_flip = 0
-        else:
-            know_flip = 1
-        room = 7
-    if room == 9:
-        if random_flip == 1:
-            random_flip = 0
-        else:
-            random_flip = 1
-        room = 7
-    if room == 10:
-        if chaning == 1:
-            chaning = 0
-        else:
-            chaning = 1
-        room = 7
-    if room == 11:
-        reset_settings()
-        room = 7
-pygame.QUIT 
+async def main():
+    global sound, running, falling, flipping, play, fall_speed, random_turn, chaning, last_digit, number, turn, win, space, color, text, room, act, black, white, gold, blue_color, pink_color, menu_color, do_input, know_flip, random_flip
+    running = True  
+        
 
+    while running:    
+        events = pygame.event.get()             
+        
+        #output of button presses 
+        if room == 0:
+            main_menu(events)
+        if room == 1:
+            main_game_player(events)
+        if room == 2:
+            main_menu_dif(events)
+        if room == 3:
+            main_game_ai(events, 2)
+        if room == 4:
+            main_game_ai(events, 5)
+        if room == 5:
+            main_game_ai(events, 6)
+        if room == 6:
+            #rest grid
+            reset()
+            print("reset")
+            room = 0
+        if room == 7:
+            main_menu_settings(events) 
+        if room == 8:
+            if know_flip == 1:
+                know_flip = 0
+            else:
+                know_flip = 1
+            room = 7
+        if room == 9:
+            if random_flip == 1:
+                random_flip = 0
+            else:
+                random_flip = 1
+            room = 7
+        if room == 10:
+            if chaning == 1:
+                chaning = 0
+            else:
+                chaning = 1
+            room = 7
+        if room == 11:
+            reset_settings()
+            room = 7
+        await asyncio.sleep(0) 
+    pygame.QUIT 
+
+asyncio.run(main())
 
