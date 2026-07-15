@@ -3,14 +3,22 @@
 import asyncio
 import time
 import pygame
-import sys
 import math
 import random
 from connect_4_ai import minimax
 from connect_4_ai import winning_move
 from connect_4_ai import get_valid_locations
 import numpy as np
+import os
+import sys
 
+def resource_path(relative_path):
+    try:
+        base_path = sys._MEIPASS
+    except AttributeError:
+        base_path = os.path.abspath(".")
+
+    return os.path.join(base_path, relative_path)
 
 sound = 1
 falling = 0
@@ -22,7 +30,7 @@ chaning = 0
 last_digit = '6'
 number = '6'
 pygame.init()
-pygame.mixer.init()
+#pygame.mixer.init()
 
 random.seed()
 
@@ -371,7 +379,7 @@ def win_con():
 
 #load images 
 def load_images(pic, buffer):
-    img = pygame.image.load('assets\\' + pic).convert_alpha()
+    img = pygame.image.load(resource_path('assets/' + pic)).convert_alpha()
     img = pygame.transform.scale(img, (scale_x - buffer , scale_y - buffer))    
 
     return img 
@@ -394,9 +402,9 @@ for i in range(7):
         border_y.append(k * scale_y)
 
 
-fall_sound = pygame.mixer.Sound('assets\\fall_sound.ogg')
-click_sound = pygame.mixer.Sound('assets\\click_sound.ogg')
-win_sound = pygame.mixer.Sound('assets\\win_sound.ogg')
+fall_sound = pygame.mixer.Sound(resource_path('assets\\fall_sound.ogg'))
+click_sound = pygame.mixer.Sound(resource_path('assets\\click_sound.ogg'))
+win_sound = pygame.mixer.Sound(resource_path('assets\\win_sound.ogg'))
 
 win = 0
 
@@ -496,7 +504,7 @@ def main_game_player(events):
 
     if next_flip == 0:
         do_input = 0
-        time.sleep(0.05)
+        #await asyncio.sleep(0.05)
         
         grid_flip()
         win = win_con()
@@ -651,7 +659,7 @@ def main_game_ai(events, depth):
 
         b_fall["x"] = -10000
         b_fall["y"] = -1000000
-        fall_sound.play()
+        #fall_sound.play()
         win = win_con()
         falling = 0
         pink = 1
@@ -705,7 +713,7 @@ def main_game_ai(events, depth):
         
     if next_flip == 0:
         do_input = 0
-        time.sleep(0.05)
+        #await asyncio.sleep(0.05)
         
         grid_flip()
         win = win_con()
@@ -954,7 +962,7 @@ def menu_button(pos_x, pos_y, width, height, b_text, room_num, back_color, t_col
             if event.button == 1:
                 if mouse_x >= new_pos_x and mouse_x <= new_pos_x + width and mouse_y >= new_pos_y and mouse_y <= new_pos_y + height:
                         click_sound.play()
-                        time.sleep(0.05)
+                        #await asyncio.sleep(0.05)
                         room = room_num
                         do_input = 0
         if event.type == pygame.QUIT:
@@ -999,8 +1007,7 @@ def grid_flip():
     
 async def main():
     global sound, running, falling, flipping, play, fall_speed, random_turn, chaning, last_digit, number, turn, win, space, color, text, room, act, black, white, gold, blue_color, pink_color, menu_color, do_input, know_flip, random_flip
-    running = True  
-        
+    print("main")    
 
     while running:    
         events = pygame.event.get()             
@@ -1046,7 +1053,7 @@ async def main():
         if room == 11:
             reset_settings()
             room = 7
-        await asyncio.sleep(0) 
+        asyncio.sleep(0) 
     pygame.QUIT 
 
 asyncio.run(main())
