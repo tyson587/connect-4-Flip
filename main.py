@@ -659,7 +659,7 @@ def main_game_ai(events, depth):
 
         b_fall["x"] = -10000
         b_fall["y"] = -1000000
-        #fall_sound.play()
+        fall_sound.play()
         win = win_con()
         falling = 0
         pink = 1
